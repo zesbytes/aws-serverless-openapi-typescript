@@ -4,27 +4,93 @@ service:
 #app: your-app-name
 #org: your-org-name
 
+frameworkVersion: '>=1.0.0 <2.0.0'
+
 custom:
+  apigateway-lambdaExecution-roleName: ${self:service.name}-${self:provider.stage}-#{AWS::Region}-lambdaRole
+  apigateway-lambdaExecution-roleArn: arn:aws:iam::#{AWS::AccountId}:role/${self:custom.apigateway-lambdaExecution-roleName}
+
   webpack:
     webpackConfig: ./webpack.config.js
-    includeModules: true
+    # make sure following is false as we are using AWS layers and webpack tree shaking instead
+    includeModules: false
+    
+    # following not supported yet. see https://github.com/serverless-heaven/serverless-webpack/issues/397 for progress
+    # entry:
+    #   pre:
+    #     - source-map-include.js    
 
-# Add the serverless-webpack plugin
 plugins:
   - serverless-webpack
+  - serverless-plugin-layer-manager
+  - serverless-pseudo-parameters  
 
 provider:
   name: aws
   runtime: nodejs12.x
+  region: ${opt:region, 'ap-southeast-2'}
+  stage: ${opt:stage, 'dev'}
   apiGateway:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+  tags:
+    classification: demo
+  memorySize: 128
+  timeout: 5
+   # one global default role for all lambdas. we override Serverless one to enable ApiGateway permission to invoke lambdas
+  role: iamRoleLambdaExecution 
+
+layers:
+  sourceMap:
+    path: layers/sourcemap
+    name: aws-sourcemap-layer
+    retain: false  
+
+package:
+  individually: true    
 
 functions:
-  hello:
-    handler: handler.hello
-    events:
-      - http:
-          method: get
-          path: hello
+  applicants_create:
+    handler: src/api/functions/applicants/create.handler
+    layers:
+      - Ref: SourceMapLambdaLayer
+    memorySize: 128
+  applicants_list:
+    handler: src/api/functions/applicants/list.handler
+    layers:
+      - Ref: SourceMapLambdaLayer
+  applicants_get:
+    handler: src/api/functions/applicants/get.handler
+    layers:
+      - Ref: SourceMapLambdaLayer
+
+resources:
+  - ${file(./apigateway-lambdaexecution-role.yaml)}
+  - Resources:
+      ApiGatewayRestApi:
+        Type: AWS::ApiGateway::RestApi
+        Properties:
+          Name: ${self:provider.stage}-${self:service:name}
+          Body:
+             ${file(./src/api/openapi-spec.yaml)}
+      ApiGatewayDeployment:
+        Type: AWS::ApiGateway::Deployment
+        Properties:
+          RestApiId:
+            Ref: ApiGatewayRestApi
+          StageName: ${self:provider.stage}
+
+## Use following for every function if dont set up apigateway-lambdaexcetion-role and don't set credentials to role for each endpoint
+## (Note - this is what serverless creates for each function automatically when http event is explicitly specified under function in serverless definition)
+
+   # ApplicantsGetLambdaPermissionApiGateway:
+    #   Type: AWS::Lambda::Permission
+    #   Properties:
+    #     FunctionName: !GetAtt
+    #       - ApplicantsUnderscorelistLambdaFunction
+    #       - Arn
+    #     Action: lambda:InvokeFunction
+    #     Principal: apigateway.amazonaws.com
+    #     SourceArn: arn:#{AWS::Partition}:execute-api:#{AWS::Region}:#{AWS::AccountId}:#{ApiGatewayRestApi}/*/*
+               

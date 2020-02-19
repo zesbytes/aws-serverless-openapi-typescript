@@ -1,0 +1,124 @@
+openapi: 3.0.0
+info:
+  title: Serverless OpenAPI demo - ${self:provider.stage}
+  description: Typescript, Serverless, AWS lambda, OpenAPI example project
+  version: 1.0.0
+x-amazon-apigateway-request-validators:
+  params-only:
+    validateRequestBody: false
+    validateRequestParameters: true
+  body-only:
+    validateRequestBody: true
+    validateRequestParameters: false  
+
+paths:
+  /applicants:
+    get:
+      tags:
+        - applicants
+      summary: Retrieve applicants
+      description: Retrieve a page of applicants
+      parameters:
+        - name: page
+          in: query
+          required: true
+          description: zero indexed page number
+          schema:
+            type: integer
+            minimum: 0
+        - name: size
+          in: query
+          required: false
+          description: number of results for page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: OK 
+      x-amazon-apigateway-request-validator: params-only
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        uri: arn:aws:apigateway:#{AWS::Region}:lambda:path/2015-03-31/functions/#{ApplicantsUnderscorelistLambdaFunction.Arn}/invocations
+        passthroughBehavior: never
+        httpMethod: POST
+        credentials: ${self:custom.apigateway-lambdaExecution-roleArn}
+        cacheKeyParameters:
+          - method.request.querystring.page
+    
+    post:
+      tags:
+        - applicants
+      description: Create applicant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Applicant'
+      responses:
+        '200':
+          description: OK
+      x-amazon-apigateway-request-validator: body-only
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        uri: arn:aws:apigateway:#{AWS::Region}:lambda:path/2015-03-31/functions/#{ApplicantsUnderscorecreateLambdaFunction.Arn}/invocations    
+        passthroughBehavior: never
+        httpMethod: POST
+        credentials: ${self:custom.apigateway-lambdaExecution-roleArn}
+  
+  /applicants/{id}:
+    get:
+      tags:
+        - applicants
+      summary: Retrieve an applicant by id
+      description: Retrieve single applicant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: applicant identifier
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Applicant'
+
+      x-amazon-apigateway-request-validator: params-only
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        uri: arn:aws:apigateway:#{AWS::Region}:lambda:path/2015-03-31/functions/#{ApplicantsUnderscoregetLambdaFunction.Arn}/invocations
+        passthroughBehavior: never
+        httpMethod: POST
+        credentials: ${self:custom.apigateway-lambdaExecution-roleArn}
+
+components:
+  schemas:
+    Applicant:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: applicant id
+        firstName:
+          type: string
+        lastName:
+          type: string
+        dateOfBirth:
+          type: string
+          # format date was added in draft 7 so currently gets ignored by aws
+          format: date
+          description: date of birth
+      required:
+        - dateOfBirth
+        - firstName
+        - lastName
+      
+
+

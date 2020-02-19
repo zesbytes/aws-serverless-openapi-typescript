@@ -1,20 +1,17 @@
 {
   "compilerOptions": {
-    "lib": ["es2017"],
+    "lib": ["es2018"], 
+    "module": "ES6",
     "removeComments": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node", // how modules are found - we use node_modules folder which is the "node" way
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "sourceMap": true,
-    "target": "es2017",
-    "outDir": "lib"
+    "target": "es2018", // ESNext doesnt work with webpack for elvis operator
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "baseUrl": "./src",
   },
-  "include": ["./**/*.ts"],
-  "exclude": [
-    "node_modules/**/*",
-    ".serverless/**/*",
-    ".webpack/**/*",
-    "_warmup/**/*",
-    ".vscode/**/*"
-  ]
+  "include": ["./src/**/*.ts"]
 }

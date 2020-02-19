@@ -1,0 +1,42 @@
+Resources:
+  iamRoleLambdaExecution:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: ${self:custom.apigateway-lambdaExecution-roleName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: 
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+          # Allow ApiGateway to assume role    
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: ${self:provider.stage}-${self:service.name}-lambda
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:CreateLogGroup
+                Resource: arn:#{AWS::Partition}:logs:#{AWS::Region}:#{AWS::AccountId}:log-group:/aws/lambda/${self:service.name}-${self:provider.stage}*:*
+              - Effect: Allow
+                Action:
+                  - logs:PutLogEvents
+                Resource: arn:#{AWS::Partition}:logs:#{AWS::Region}:#{AWS::AccountId}:log-group:/aws/lambda/${self:service.name}-${self:provider.stage}*:*:*
+              # Allow Role to also invoke lambdas for case when role used by ApiGateway and not by lambda itself
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: '*'
+        
