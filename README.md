@@ -63,6 +63,7 @@ npm install -D terser-webpack-plugin [so comments are removed from dependent mod
 - The lambda function reference identifier being used with the OpenApi specification document is complex and not intuitive
 - Extensive CloudFormation configuration within Serverless YAML is less than ideal and starts to defeat some of the purpose for using Serverless in first place
 - Use of credential roles rather than policies for lambda resources is undesirable
+- Resources deleted from serverless configuration are not removed upon redeployment
 - Incorrect serverless deployment console output and having successful deployments when there are OpenApi issues is unsatisfactory. (even if can use AWS to manually import the OpenApi specification to validate it separately)
 
 ## Recommendation
