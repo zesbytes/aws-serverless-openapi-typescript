@@ -10,7 +10,7 @@
     "deploy-prod": "sls deploy --stage prod"
   },
   "dependencies": {
-    "lodash-es": "^4.17.15",
+    "lodash-es": "^4.17.21",
     "source-map-support": "^0.5.10"
   },
   "devDependencies": {
